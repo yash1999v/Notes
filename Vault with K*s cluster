@@ -1,0 +1,125 @@
+Watched https://youtu.be/TeD8jDem2gs?feature=shared
+
+and made notes on vault with dev and prod mode 
+
+============================
+vault 
+- dev 
+- prod 
+
+Vault for secret management 
+- have UI and API feature
+
+Kuberenets also have secret but for centralized and better secret management
+- To add here (only one level)
+  - we have secrets working like masking , we encrypt a pasword and put that encypted text
+  - ex: debpassword -> RGBpjhh778hhjz
+
+But vault can help with certificates, tokens, passwords 
+
+-->Kubernetes should be authenticalted to allow the secret 
+-->When using vault -> Serveice account should be made and poilicies should be set to access and level of access like roles
+-->backend of vault will not have the dbpassword that we provide it will go parsed
+
+
+There are 2 versions prod and dev 
+- dev is ephermal and stored in RAM
+- (min 3 pods will be running)prod is safe and persistent with High Avilability(HA)
+  vault-0 - main , vault-1,2(secondary)   
+
+- In prod we have 2 storages 
+  - raft (is buildin storage by vault)
+  - consul  - external for vault (not  mandatory if k8s is using it already )
+
+How to use this 
+
+EC2 instance with ports 587,22,443,80,3000-11000 
+sudo apt update
+Use IAM and define role that can create EKE cluster 
+
+Create role - amazoneksnode group 
+In machine 
+run aws cli - logiin with access tokens
+aws configure
+run terraform 
+have kubectl and helm- create service accounts
+ 
+
+once created resources with terraform we should be able to connect - but config file is missing 
+use cmd : aws eks --region ap south-1 update kubeconfig --name devops-cluster --> to have the cluster endpoints and servers configured
+
+
+then run 2 commands 
+- association of IAM oids provider and 
+- create a iamserviceaccount with region, name,namsepace,cluster,policy,overideexistingserviceaccounts
+
+
+cloudforamtion -->stack will be generated
+run commands to integrate with ingress,sort manager,cicd driver,voulumes
+
+Then create a namespace with vault 
+1. kubectl create namespace vault
+2. Service account in default namesapce will be used by applications to authenticate to vault so cmd below in default
+   - kubectl create serviceaccount vault-auth -n  default
+3. in webapps -  kubectl create serviceaccount vault-auth -n webapps
+
+deploy vault by helm 
+
+- helm install vault hashicorp.vault --namespace vault --set "server.dev.enabled=true"
+
+once running use a nodeport service and have it running as vault pos -0 
+
+
+get token of it in logs by kubectl logs vault-0 -n vault
+login to ui 
+add secret engines 
+
+
+permissions 
+kuberntes exec -n vault-it vault-0 --vault auth enable kuberntes --> for auth method 
+once enabled configure it run some big commands so that default namespace and the webapp namespace is authenticated and able to configure with the
+vault pods
+
+SET UP policies now
+in secret path -- > like myapp-policy.hcl 
+
+path "secret/data/mysql" {
+capabilities = ["create","read"]
+}
+path "secret/data/Frontend" {
+capabilities = ["create","read"]
+}
+
+apply -->kubectl cp myapp-policy.hcl vault/vault-0:/tmp/myapp-policy.hcl 
+kubectl exec ----------- /tmp/myapp--.policy //To write enable the policies
+
+
+create a role to bind the serviceAccount with the Policy with time to lease (ttl) by kubectl exec cmmand 
+verify the role if connceted with the policy properly 
+
+
+last part - the yaml file 
+manifest file should be having annotations like
+vault.hashicorp.com/agent-inject:"true"->retrieve secret with KV
+extract the scret and store in the container and format passwrod as shell variable to a file
+file like secret/password
+-> export MYSQL_ROOT_PASSWORD=""{{.Data.data.MYSQL_ROOT_PASSWORD}}
+
+then add certain arguments for non authenticated access
+============================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
